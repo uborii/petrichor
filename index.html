@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PETRICHOR — granular sounds of nature</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Italiana&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg-cream:#fdfbf6;
+  --title-sage:#4e664e;
+  --subtitle:#8c918d;
+  --text-soft:rgba(95,100,92,0.95);
+  --text-faint:rgba(165,168,158,0.95);
+  --accent-sage:#73a57d;
+  --accent-warm:#c8ad6e;
+  --accent-rec:#c87878;
+}
+
+body{
+  background:var(--bg-cream);
+  color:var(--text-soft);
+  font-family:'Cormorant Garamond',serif;
+  height:100vh;width:100vw;
+  overflow:hidden;
+  position:relative;
+}
+
+#bgCanvas{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  z-index:1;pointer-events:none;
+}
+
+#video{
+  position:absolute;
+  top:50%;left:50%;
+  width:100vw;height:100vh;
+  transform:translate(-50%,-50%) scaleX(-1);
+  object-fit:cover;
+  opacity:0;
+  z-index:0;pointer-events:none;
+}
+
+#canvas{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  z-index:5;pointer-events:none;
+}
+
+.ui{
+  position:absolute;inset:0;z-index:20;
+  pointer-events:none;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  padding:24px 32px;
+}
+.ui > * { pointer-events:auto; }
+
+header{ text-align:center;margin-top:8px; }
+.title{
+  font-family:'Italiana',serif;
+  font-size:clamp(2.6rem,7vw,5.2rem);
+  font-weight:400;
+  letter-spacing:0.4em;
+  text-indent:0.4em;
+  line-height:1;
+  color:var(--title-sage);
+  text-shadow:
+    0 2px 6px rgba(78,102,78,0.18),
+    0 0 38px rgba(255,248,225,0.6);
+  position:relative;
+}
+.subtitle{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;font-weight:300;
+  font-size:clamp(0.85rem,1.3vw,1.1rem);
+  letter-spacing:0.25em;
+  color:var(--subtitle);
+  margin-top:14px;
+}
+.subtitle .ornament{ display:inline-block;margin:0 14px;opacity:0.65; }
+.title-sparkles{ display:none; }
+
+/* Splash */
+.splash{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:24px;z-index:30;
+  background:radial-gradient(circle at center, rgba(253,251,246,0.4) 0%, rgba(253,251,246,0.85) 70%);
+  transition:opacity 1s ease;
+}
+.splash.hide{ opacity:0;pointer-events:none; }
+.splash p{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;font-weight:300;
+  font-size:1.1rem;letter-spacing:0.2em;
+  color:var(--subtitle);
+  max-width:36ch;text-align:center;line-height:1.7;
+}
+.begin-btn{
+  font-family:'Italiana',serif;
+  font-size:1.4rem;
+  letter-spacing:0.4em;text-indent:0.4em;
+  color:var(--title-sage);
+  background:rgba(255,255,255,0.4);
+  border:1px solid rgba(115,165,125,0.5);
+  padding:18px 48px;border-radius:2px;
+  cursor:pointer;
+  transition:all 0.4s ease;
+  backdrop-filter:blur(4px);
+}
+.begin-btn:hover{
+  border-color:rgba(115,165,125,0.9);
+  color:#324f32;
+  letter-spacing:0.5em;text-indent:0.5em;
+  background:rgba(255,255,255,0.7);
+  box-shadow:
+    0 0 24px rgba(115,165,125,0.25),
+    inset 0 0 24px rgba(196,230,196,0.2);
+}
+.begin-btn:disabled{ opacity:0.5;cursor:default; }
+
+/* Controls */
+.controls{
+  display:flex;flex-direction:column;align-items:center;
+  gap:16px;opacity:0;
+  transition:opacity 1.2s ease;
+}
+.controls.show{ opacity:1; }
+
+.effects-row{
+  display:flex;gap:32px;align-items:center;
+  padding-bottom:4px;
+}
+.effect{
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  min-width:120px;
+}
+.effect-label{
+  font-family:'Cormorant Garamond',serif;
+  font-size:0.7rem;font-weight:400;
+  letter-spacing:0.32em;
+  color:var(--text-faint);
+  text-transform:uppercase;
+}
+.effect-slider{
+  width:120px;
+  -webkit-appearance:none;appearance:none;
+  background:transparent;cursor:pointer;
+  outline:none;
+}
+.effect-slider::-webkit-slider-runnable-track{
+  height:1px;background:rgba(115,165,125,0.25);
+}
+.effect-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:11px;height:11px;border-radius:50%;
+  background:rgba(115,165,125,0.95);
+  margin-top:-5px;
+  box-shadow:
+    0 0 12px rgba(115,165,125,0.45),
+    inset 0 0 4px rgba(255,255,255,0.5);
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.effect-slider::-webkit-slider-thumb:hover{
+  background:#5b8d6d;
+  box-shadow:0 0 20px rgba(115,165,125,0.8);
+  transform:scale(1.2);
+}
+.effect-slider::-moz-range-track{
+  height:1px;background:rgba(115,165,125,0.25);border:none;
+}
+.effect-slider::-moz-range-thumb{
+  width:11px;height:11px;border:none;border-radius:50%;
+  background:rgba(115,165,125,0.95);
+  box-shadow:0 0 12px rgba(115,165,125,0.45);
+  cursor:pointer;
+}
+.effect-val{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;
+  font-size:0.78rem;font-weight:300;
+  color:var(--text-soft);
+  letter-spacing:0.05em;
+  min-width:36px;text-align:center;
+}
+
+.source-row{
+  display:flex;gap:6px;align-items:center;
+}
+.source-btn{
+  font-family:'Cormorant Garamond',serif;
+  font-weight:400;
+  font-size:0.85rem;letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  background:rgba(255,255,255,0.4);
+  border:1px solid rgba(115,135,115,0.25);
+  padding:7px 18px;border-radius:2px;
+  cursor:pointer;transition:all 0.3s ease;
+  backdrop-filter:blur(2px);
+}
+.source-btn:hover{
+  color:var(--text-soft);
+  border-color:rgba(115,165,125,0.5);
+  background:rgba(255,255,255,0.6);
+}
+.source-btn.active{
+  color:var(--accent-sage);
+  border-color:rgba(115,165,125,0.75);
+  background:rgba(196,230,196,0.25);
+  box-shadow:
+    0 0 14px rgba(115,165,125,0.18),
+    inset 0 0 14px rgba(196,230,196,0.25);
+}
+.source-btn.rec{
+  color:rgba(180,90,90,0.85);
+  border-color:rgba(200,120,120,0.35);
+}
+.source-btn.rec:hover{
+  color:rgba(180,90,90,1);
+  border-color:rgba(200,120,120,0.7);
+}
+.source-btn.rec.recording{
+  color:#a04545;
+  border-color:rgba(200,80,80,0.85);
+  background:rgba(255,200,200,0.35);
+  box-shadow:0 0 18px rgba(200,100,100,0.35);
+  animation:recPulse 1.2s ease-in-out infinite;
+}
+@keyframes recPulse{
+  0%,100% { opacity:1; }
+  50%     { opacity:0.7; }
+}
+.source-btn.save{
+  color:rgba(160,130,70,0.95);
+  border-color:rgba(200,170,110,0.35);
+}
+.source-btn.save:hover{
+  color:rgba(140,110,55,1);
+  border-color:rgba(200,170,110,0.7);
+}
+.source-btn.save.saving{
+  color:#7a5e26;
+  border-color:rgba(200,170,110,0.85);
+  background:rgba(255,240,200,0.4);
+  box-shadow:0 0 18px rgba(200,170,110,0.35);
+  animation:recPulse 1.5s ease-in-out infinite;
+}
+.source-divider{
+  width:1px;height:18px;
+  background:rgba(115,135,115,0.2);margin:0 6px;
+}
+
+.hint{
+  font-family:'Cormorant Garamond',serif;
+  font-style:italic;font-weight:300;
+  font-size:0.85rem;letter-spacing:0.18em;
+  color:var(--text-faint);
+  text-align:center;max-width:60ch;line-height:1.6;
+}
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+<canvas id="bgCanvas"></canvas>
+<canvas id="canvas"></canvas>
+
+<div class="ui">
+  <header>
+    <h1 class="title">PETRICHOR
+      <span class="title-sparkles" id="titleSparkles"></span>
+    </h1>
+    <p class="subtitle">
+      <span class="ornament">✦</span>
+      an instrument woven from nature
+      <span class="ornament">✦</span>
+    </p>
+  </header>
+
+  <div class="controls" id="controls">
+    <div class="effects-row">
+      <div class="effect">
+        <span class="effect-label">REVERB</span>
+        <input type="range" class="effect-slider" id="reverbSlider" min="0" max="100" step="1" value="40">
+        <span class="effect-val" id="reverbVal">40</span>
+      </div>
+      <div class="effect">
+        <span class="effect-label">DELAY</span>
+        <input type="range" class="effect-slider" id="delaySlider" min="0" max="100" step="1" value="20">
+        <span class="effect-val" id="delayVal">20</span>
+      </div>
+    </div>
+    <div class="source-row" id="sourceRow">
+      <button class="source-btn active" data-preset="birds">forest</button>
+      <button class="source-btn" data-preset="rain">rain</button>
+      <button class="source-btn" data-preset="waves">ocean</button>
+      <button class="source-btn" data-preset="earth">earth</button>
+      <span class="source-divider"></span>
+      <button class="source-btn rec" id="recBtn">● record</button>
+      <span class="source-divider"></span>
+      <button class="source-btn save" id="saveBtn">↓ save</button>
+    </div>
+    <p class="hint">
+      left hand carves the texture · right hand shapes the air
+    </p>
+  </div>
+</div>
+
+<div class="splash" id="splash">
+  <p>
+    move your hands before the camera. <br>
+    listen for the wild.
+  </p>
+  <button class="begin-btn" id="beginBtn" onclick="begin()">begin</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<script>
+// ═════════════════════════════════════════════════════════════
+//  PETRICHOR — granular sounds of nature
+// ═════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// WATERCOLOR BACKGROUND — drawn once on bgCanvas
+// Distinct paint blooms with saturated cores + soft halos
+// ═══════════════════════════════════════════════
+function drawIrregularBlob(ctx, cx, cy, radius, numPoints, jitter, rng) {
+  ctx.beginPath();
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (2 * Math.PI * i) / numPoints;
+    const r = radius * (1 + (rng() - 0.5) * jitter * 2);
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Seeded RNG for stable layout
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function drawWatercolorBloom(ctx, cx, cy, radius, color, intensity, seed) {
+  const [r, g, b] = color;
+  const rng = mulberry32(seed);
+
+  // Halo — large, soft, faint
+  ctx.save();
+  ctx.filter = 'blur(55px)';
+  ctx.fillStyle = `rgba(${r},${g},${b},${(30 * intensity) / 255})`;
+  drawIrregularBlob(ctx, cx, cy, radius * 1.5, 20, 0.4, rng);
+  ctx.restore();
+
+  // Mid layer
+  ctx.save();
+  ctx.filter = 'blur(30px)';
+  ctx.fillStyle = `rgba(${r},${g},${b},${(70 * intensity) / 255})`;
+  drawIrregularBlob(ctx, cx, cy, radius * 1.0, 18, 0.3, mulberry32(seed + 1));
+  ctx.restore();
+
+  // Core — saturated, less blurred
+  ctx.save();
+  ctx.filter = 'blur(18px)';
+  ctx.fillStyle = `rgba(${r},${g},${b},${(110 * intensity) / 255})`;
+  drawIrregularBlob(ctx, cx, cy, radius * 0.6, 16, 0.25, mulberry32(seed + 2));
+  // Smaller patches inside the core
+  for (let i = 0; i < 3; i++) {
+    const ox = (rng() - 0.5) * radius * 0.5;
+    const oy = (rng() - 0.5) * radius * 0.5;
+    drawIrregularBlob(ctx, cx + ox, cy + oy, radius * 0.25, 12, 0.3, mulberry32(seed + 10 + i));
+  }
+  ctx.restore();
+
+  // Capillary fibers
+  ctx.save();
+  ctx.filter = 'blur(12px)';
+  const numFibers = 3 + Math.floor(rng() * 4);
+  for (let f = 0; f < numFibers; f++) {
+    const angle = rng() * Math.PI * 2;
+    const length = radius * (0.7 + rng() * 0.8);
+    const steps = 40;
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      const rPos = radius * 0.6 + length * t;
+      const wiggle = Math.sin(t * 4 * Math.PI) * (1 - t) * 12;
+      const fx = cx + rPos * Math.cos(angle) + wiggle * Math.cos(angle + Math.PI / 2);
+      const fy = cy + rPos * Math.sin(angle) + wiggle * Math.sin(angle + Math.PI / 2);
+      const alpha = (45 * intensity * Math.pow(1 - t, 1.4)) / 255;
+      const width = Math.max(1, 14 * Math.pow(1 - t, 0.8));
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(fx, fy, width, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawWatercolorBackground() {
+  const bgCanvas = document.getElementById('bgCanvas');
+  const ctx = bgCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  bgCanvas.width = W * dpr;
+  bgCanvas.height = H * dpr;
+  bgCanvas.style.width = W + 'px';
+  bgCanvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Cream paper base
+  ctx.fillStyle = '#fdfbf6';
+  ctx.fillRect(0, 0, W, H);
+
+  // Bloom positions scaled to canvas size
+  const blooms = [
+    [0.13, 0.25, 180, [150, 195, 130], 0.95],
+    [0.84, 0.29, 220, [230, 205, 145], 0.85],
+    [0.18, 0.55, 200, [210, 180, 165], 0.7],
+    [0.82, 0.6,  200, [170, 200, 195], 0.85],
+    [0.21, 0.77, 170, [200, 180, 195], 0.7],
+    [0.79, 0.79, 190, [160, 200, 155], 0.8],
+    [0.45, 0.28,  90, [215, 230, 185], 0.6],
+    [0.6,  0.85, 100, [240, 220, 175], 0.55],
+    [0.1,  0.42,  70, [215, 230, 210], 0.5],
+    [0.92, 0.43,  80, [245, 210, 195], 0.55],
+    [0.5,  0.5,  340, [228, 240, 220], 0.25],
+  ];
+
+  blooms.forEach((bloom, i) => {
+    const [xPct, yPct, radius, color, intensity] = bloom;
+    drawWatercolorBloom(ctx, xPct * W, yPct * H, radius, color, intensity, 42 + i * 13);
+  });
+
+  // Subtle ink drips
+  const drips = [
+    [0.13, 0.35, 180, [140, 185, 125]],
+    [0.84, 0.44, 200, [215, 190, 140]],
+    [0.21, 0.92,  70, [200, 180, 195]],
+    [0.79, 0.93,  80, [160, 195, 155]],
+    [0.18, 0.7,  120, [210, 180, 170]],
+    [0.82, 0.78, 130, [170, 200, 195]],
+  ];
+  drips.forEach(([xPct, yPct, length, color]) => {
+    const [r, g, b] = color;
+    const x = xPct * W;
+    const yStart = yPct * H;
+    for (let i = 0; i < length; i++) {
+      const t = i / length;
+      const alpha = (55 * Math.pow(1 - t, 1.3)) / 255;
+      const width = Math.max(1, 3 * Math.pow(1 - t, 0.6));
+      const wander = Math.sin(t * 3) * 1.5;
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x + wander, yStart + i, width, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Small paint splatter
+  const splatterRng = mulberry32(33);
+  ctx.save();
+  ctx.filter = 'blur(2px)';
+  const palette = [
+    [155, 190, 140],
+    [220, 190, 160],
+    [180, 200, 195],
+    [210, 185, 195],
+    [215, 200, 155],
+  ];
+  for (let i = 0; i < 35; i++) {
+    const cx = 60 + splatterRng() * (W - 120);
+    const cy = 60 + splatterRng() * (H - 120);
+    const rad = 2 + splatterRng() * 6;
+    const col = palette[Math.floor(splatterRng() * palette.length)];
+    const alpha = 40 + splatterRng() * 80;
+    ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha / 255})`;
+    drawIrregularBlob(ctx, cx, cy, rad, 8, 0.5, mulberry32(i + 100));
+  }
+  ctx.restore();
+}
+
+// Draw at load + on resize
+window.addEventListener('load', drawWatercolorBackground);
+window.addEventListener('resize', () => {
+  // Debounce simple
+  clearTimeout(window._bgRedrawTimer);
+  window._bgRedrawTimer = setTimeout(drawWatercolorBackground, 200);
+});
+// Draw immediately if DOM is ready
+if (document.readyState !== 'loading') drawWatercolorBackground();
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let audioCtx = null;
+let engine = null;
+let presetBuffers = {};
+let userBuffer = null;
+let currentSource = 'birds';
+let isRec = false;
+let mediaRec = null;
+let recChunks = [];
+
+// User-adjustable parameters
+let reverbAmt = 0.4;   // 0..1
+let delayAmt = 0.2;    // 0..1
+
+// ═══════════════════════════════════════════════
+// NATURE PRESETS — synthesized
+// ═══════════════════════════════════════════════
+// ─── FOREST — warm string section pad ────────────────────────────────────────
+// Multiple detuned voices (like string quartet), rich harmonics, slow vibrato.
+// Granular synthesis will slice this into smooth, resonant fragments.
+function makeBirds(ctx, duration = 6) {
+  const sr = ctx.sampleRate;
+  const len = sr * duration;
+  const buf = ctx.createBuffer(1, len, sr);
+  const d = buf.getChannelData(0);
+
+  // 5 string voices: root, octave up, 5th, upper root, upper 5th — all slightly detuned
+  const voices = [
+    { f0: 110,   det: 0.0  },
+    { f0: 110,   det: 0.8  },
+    { f0: 110,   det:-0.7  },
+    { f0: 165,   det: 0.3  },
+    { f0: 220,   det:-0.5  },
+  ];
+  // Harmonic series — richer toward the top for string-like timbre
+  const harms = [
+    {n:1,a:0.70},{n:2,a:0.55},{n:3,a:0.42},{n:4,a:0.32},
+    {n:5,a:0.22},{n:6,a:0.15},{n:7,a:0.10},{n:8,a:0.07}
+  ];
+
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    let s = 0;
+    for (const v of voices) {
+      // Slow vibrato slightly offset per voice → natural string ensemble movement
+      const vib = 1 + 0.003 * Math.sin(2 * Math.PI * 3.5 * t + v.det);
+      for (const h of harms) {
+        const freq = v.f0 * h.n * vib * (1 + v.det * 0.0012);
+        s += Math.sin(2 * Math.PI * freq * t) * h.a;
+      }
+    }
+    // Gentle bow-pressure breath (very slow amplitude swell)
+    const breath = 0.82 + 0.18 * Math.sin(2 * Math.PI * 0.21 * t);
+    // Tiny "bow on string" texture
+    const bow = (Math.random() - 0.5) * 0.03;
+    d[i] = (s * 0.047 + bow) * breath;
+  }
+  return buf;
+}
+
+// ─── RAIN — crystal drops on a pentatonic scale ───────────────────────────────
+// Each drop is a resonant pitched tone (C major pentatonic). All drops harmonize
+// with each other. Quiet background hiss for ambience. Never dissonant.
+function makeRain(ctx, duration = 6) {
+  const sr = ctx.sampleRate;
+  const len = sr * duration;
+  const buf = ctx.createBuffer(1, len, sr);
+  const d = buf.getChannelData(0);
+
+  // Very quiet rain hiss (almost subliminal)
+  let lp = 0;
+  for (let i = 0; i < len; i++) {
+    const noise = Math.random() * 2 - 1;
+    lp = lp * 0.4 + noise * 0.6;
+    d[i] = (noise - lp * 0.4) * 0.008;
+  }
+
+  // C major pentatonic across 3 octaves — all intervals consonant
+  const pentatonic = [262, 294, 330, 392, 440, 523, 587, 659, 784, 880, 1047, 1175];
+
+  // 90 drops with long resonant tails (like crystal bowl or wine glass)
+  for (let drop = 0; drop < 90; drop++) {
+    const t0 = Math.random() * duration;
+    const start = Math.floor(t0 * sr);
+    const freq = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+    const amp = 0.04 + Math.random() ** 2 * 0.16;   // skewed toward quiet
+    const decay = 0.5 + Math.random() * 1.4;         // long, singing tail
+    const dropLen = Math.min(Math.floor(sr * decay * 5), len - start);
+
+    for (let i = 0; i < dropLen; i++) {
+      if (start + i >= len) break;
+      const t2 = i / sr;
+      const env = Math.exp(-t2 / decay);
+      // Fundamental + two upper harmonics for ringing quality
+      d[start + i] += (
+        Math.sin(2 * Math.PI * freq * t2) * 0.65 +
+        Math.sin(2 * Math.PI * freq * 2 * t2) * 0.25 +
+        Math.sin(2 * Math.PI * freq * 3 * t2) * 0.10
+      ) * amp * env;
+    }
+  }
+  return buf;
+}
+
+// ─── OCEAN — pure harmonic swell ─────────────────────────────────────────────
+// No noise at all. Pure sine wave harmonics with a slow 0.33Hz swell LFO.
+// Deep A1/E2/A2 fundamentals — like an organ pedal + string overtones underwater.
+function makeWaves(ctx, duration = 6) {
+  const sr = ctx.sampleRate;
+  const len = sr * duration;
+  const buf = ctx.createBuffer(1, len, sr);
+  const d = buf.getChannelData(0);
+
+  // Three bass roots (A1 - E2 - A2, an open 5th chord)
+  const bases = [
+    { f: 55,    amp: 0.55 },
+    { f: 82.4,  amp: 0.42 },
+    { f: 110,   amp: 0.32 },
+  ];
+  const harms = [
+    {n:1,a:1.0},{n:2,a:0.55},{n:3,a:0.35},
+    {n:4,a:0.22},{n:5,a:0.14},{n:6,a:0.09}
+  ];
+  const swellHz = 0.32; // one swell per ~3.1 sec
+
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    let s = 0;
+    for (const b of bases) {
+      // Very slight per-base detune for natural chorus (like underwater resonance)
+      const det = 1 + 0.0008 * Math.sin(2 * Math.PI * 0.09 * t + b.f);
+      for (const h of harms) {
+        s += Math.sin(2 * Math.PI * b.f * h.n * det * t) * h.a * b.amp;
+      }
+    }
+    // Swell: smooth cos curve, biased to rest at lower volume
+    const phase = 2 * Math.PI * swellHz * t;
+    const swell = 0.38 + 0.62 * Math.pow((Math.sin(phase) + 1) / 2, 1.6);
+    d[i] = s * swell * 0.065;
+  }
+  return buf;
+}
+
+// ─── EARTH — deep didgeridoo / bass vocal pad ─────────────────────────────────
+// Bb1 fundamental (58Hz) with very rich harmonics up to the 12th.
+// Slow vowel-like formant modulation gives a breathing, living quality.
+// Like a bass voice holding a long note in a stone cave.
+function makeEarth(ctx, duration = 6) {
+  const sr = ctx.sampleRate;
+  const len = sr * duration;
+  const buf = ctx.createBuffer(1, len, sr);
+  const d = buf.getChannelData(0);
+
+  const f0 = 58; // Bb1
+  const harms = [
+    {n:1,a:0.80},{n:2,a:0.68},{n:3,a:0.58},{n:4,a:0.48},
+    {n:5,a:0.38},{n:6,a:0.30},{n:7,a:0.24},{n:8,a:0.19},
+    {n:9,a:0.15},{n:10,a:0.11},{n:12,a:0.08}
+  ];
+
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    let s = 0;
+    // Slow vowel modulation: harmonics 2–4 swell and recede (like "ah" → "oh")
+    const vowel = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.17 * t);
+    for (const h of harms) {
+      let ha = h.a;
+      if (h.n >= 2 && h.n <= 4) ha *= (1 + vowel * 0.55);
+      s += Math.sin(2 * Math.PI * f0 * h.n * t) * ha;
+    }
+    // Subtle breath — gives the "alive" organic texture
+    const breath = (Math.random() - 0.5) * 0.04;
+    const pressure = 0.86 + 0.14 * Math.sin(2 * Math.PI * 0.28 * t);
+    d[i] = (s * 0.048 + breath) * pressure;
+  }
+  return buf;
+}
+
+
+
+function makeReverbImpulse(ctx, duration = 4.5, decay = 2.5) {
+  const sr = ctx.sampleRate;
+  const len = sr * duration;
+  const imp = ctx.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = imp.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return imp;
+}
+
+// ═══════════════════════════════════════════════
+// HANN WINDOW — pre-computed cosine grain envelope
+// 0→1→0 smooth curve: eliminates click artifacts at grain edges
+// ═══════════════════════════════════════════════
+const HANN_CURVE = (() => {
+  const N = 64;
+  const c = new Float32Array(N);
+  for (let i = 0; i < N; i++) c[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (N - 1)));
+  return c;
+})();
+
+// ═══════════════════════════════════════════════
+// GRAIN STREAM
+// ═══════════════════════════════════════════════
+class GrainStream {
+  constructor(ctx, dest) {
+    this.ctx = ctx;
+    this.gain = ctx.createGain();
+    this.gain.gain.value = 0;
+    this.gain.connect(dest);
+    this.buffer = null;
+    this.targetFreq = 220;
+    this.sourcePos = 0.5;
+    this.grainSize = 0.025;
+    this.spray = 0;
+    this.nextGrainAt = 0;
+    this.running = false;
+    this.timer = null;
+    this.onGrain = null;
+  }
+  setBuffer(buf) { this.buffer = buf; }
+  setFreq(f) { this.targetFreq = Math.max(20, Math.min(8000, f)); }
+  setGain(v, time = 0.08) {
+    const now = this.ctx.currentTime;
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now);
+    this.gain.gain.linearRampToValueAtTime(v, now + time);
+  }
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.nextGrainAt = this.ctx.currentTime + 0.01;
+    this._tick();
+    this.timer = setInterval(() => this._tick(), 22);
+  }
+  stop() {
+    this.running = false;
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+  }
+  _tick() {
+    if (!this.running || !this.buffer) return;
+    const now = this.ctx.currentTime;
+    const horizon = now + 0.1;
+    // Cap period at 7.5ms (≈130 grains/sec max) to prevent CPU overload at high freqs.
+    // Below ~133Hz: trigger rate = actual frequency (pitch accurate).
+    // Above ~133Hz: trigger rate capped; grain overlap still creates the timbre.
+    const period = Math.max(1 / this.targetFreq, 0.0075);
+    let n = 0;
+    while (this.nextGrainAt < horizon && n < 20) {
+      this._fire(this.nextGrainAt, this.grainSize);
+      this.nextGrainAt += period;
+      n++;
+    }
+    if (this.nextGrainAt < now - 0.05) this.nextGrainAt = now + 0.005;
+  }
+  _fire(when, size) {
+    const dur = this.buffer.duration;
+    const margin = Math.min(0.2, dur * 0.1);
+    const baseOff = margin + this.sourcePos * (dur - 2 * margin - size);
+    const jitter = (Math.random() - 0.5) * this.spray * (dur * 0.5);
+    let off = baseOff + jitter;
+    off = Math.max(0, Math.min(dur - size, off));
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffer;
+    src.playbackRate.value = 1;
+
+    const env = this.ctx.createGain();
+    // 5-point Hann approximation: [0, 0.5, 1, 0.5, 0]
+    // Smooth attack/release like Hann, but only 5 API calls vs 64
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(0.5, when + size * 0.25);
+    env.gain.linearRampToValueAtTime(1,   when + size * 0.5);
+    env.gain.linearRampToValueAtTime(0.5, when + size * 0.75);
+    env.gain.linearRampToValueAtTime(0,   when + size);
+
+    src.connect(env);
+    env.connect(this.gain);
+
+    try {
+      src.start(when, off, size);
+      if (this.onGrain) this.onGrain(when, this.targetFreq);
+    } catch(e) {}
+  }
+}
+
+// ═══════════════════════════════════════════════
+// GRAIN ENGINE — harmony stack + filter + reverb + delay
+// ═══════════════════════════════════════════════
+class GrainEngine {
+  constructor(ctx) {
+    this.ctx = ctx;
+
+    // Master filter
+    this.filter = ctx.createBiquadFilter();
+    this.filter.type = 'lowpass';
+    this.filter.frequency.value = 4000;
+    this.filter.Q.value = 0.6;
+
+    // Master output gain
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = 0.7;
+    this.masterGain.connect(ctx.destination);
+
+    // Dry path
+    this.dryGain = ctx.createGain();
+    this.dryGain.gain.value = 1;
+    this.dryGain.connect(this.masterGain);
+
+    // Reverb path
+    this.revHP = ctx.createBiquadFilter();
+    this.revHP.type = 'highpass';
+    this.revHP.frequency.value = 200;
+    this.reverb = ctx.createConvolver();
+    this.reverb.buffer = makeReverbImpulse(ctx, 4.5, 2.2);
+    this.reverbWet = ctx.createGain();
+    this.reverbWet.gain.value = 0;
+    this.revHP.connect(this.reverb);
+    this.reverb.connect(this.reverbWet);
+    this.reverbWet.connect(this.masterGain);
+
+    // Delay path (with feedback + lowpass in feedback loop)
+    this.delay = ctx.createDelay(2.0);
+    this.delay.delayTime.value = 0.55;
+    this.delayLP = ctx.createBiquadFilter();
+    this.delayLP.type = 'lowpass';
+    this.delayLP.frequency.value = 3200;
+    this.delayFeedback = ctx.createGain();
+    this.delayFeedback.gain.value = 0.55;
+    this.delayWet = ctx.createGain();
+    this.delayWet.gain.value = 0;
+    // routing:
+    // filter → delay → delayLP → delayFeedback → delay (loop)
+    //                          → delayWet → masterGain
+    this.delay.connect(this.delayLP);
+    this.delayLP.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delay);
+    this.delayLP.connect(this.delayWet);
+    this.delayWet.connect(this.masterGain);
+
+    // Connect filter to all 3 paths
+    this.filter.connect(this.dryGain);
+    this.filter.connect(this.revHP);
+    this.filter.connect(this.delay);
+
+    // Harmony stack
+    this.ratios = [
+      1,
+      Math.pow(2, 4/12),   // major 3rd
+      Math.pow(2, 7/12),   // 5th
+      Math.pow(2, 11/12),  // major 7th
+      Math.pow(2, 14/12),  // major 9th
+    ];
+    this.streams = this.ratios.map(() => new GrainStream(ctx, this.filter));
+
+    this.onGrain = null;
+    this.streams.forEach((s, i) => {
+      s.onGrain = (when, freq) => { if (this.onGrain) this.onGrain(i, when, freq); };
+    });
+  }
+
+  setBuffer(buf) { this.streams.forEach(s => s.setBuffer(buf)); }
+  start() { this.streams.forEach(s => s.start()); }
+  stop()  { this.streams.forEach(s => s.stop()); }
+
+  harmonyGains(spread) {
+    return [0,1,2,3,4].map(i => {
+      if (i === 0) return 1;
+      const start = (i - 1) * 0.18;
+      const end   = i * 0.18 + 0.08;
+      return Math.max(0, Math.min(1, (spread - start) / (end - start)));
+    });
+  }
+
+  update(p) {
+    const hg = this.harmonyGains(p.harmonyAmt);
+    this.streams.forEach((s, i) => {
+      s.setFreq(p.basePitch * this.ratios[i]);
+      s.sourcePos = p.sourcePos;
+      s.grainSize = p.grainSize;
+      s.spray = p.spray;
+      const baseLevel = [0.32, 0.22, 0.22, 0.18, 0.18][i];
+      s.setGain(hg[i] * baseLevel, 0.06);
+    });
+
+    const now = this.ctx.currentTime;
+    this.filter.frequency.setTargetAtTime(p.filterFreq, now, 0.04);
+    // Reverb: full wet at slider=100. At extreme, dry signal also attenuates → drowning in space
+    this.reverbWet.gain.setTargetAtTime(p.reverbAmt * 1.4, now, 0.15);
+    this.dryGain.gain.setTargetAtTime(1 - p.reverbAmt * 0.45, now, 0.15);
+    // Delay: feedback ramps from 0.35 to 0.88 (high but stable). Wet up to 1.1
+    this.delayWet.gain.setTargetAtTime(p.delayAmt * 1.1, now, 0.15);
+    this.delayFeedback.gain.setTargetAtTime(0.35 + p.delayAmt * 0.53, now, 0.15);
+    this.masterGain.gain.setTargetAtTime(p.masterAmt ?? 0.7, now, 0.1);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// WAV RECORDER — captures master output, encodes to WAV
+// ═══════════════════════════════════════════════
+let recorder = null;
+let isSaving = false;
+let saveTimerInterval = null;
+
+class WavRecorder {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.sampleRate = ctx.sampleRate;
+    this.bufferSize = 4096;
+
+    // Public input: connect any source here to record it
+    this.input = ctx.createGain();
+    this.processor = ctx.createScriptProcessor(this.bufferSize, 2, 2);
+    this.silentOut = ctx.createGain();
+    this.silentOut.gain.value = 0;
+
+    this.input.connect(this.processor);
+    this.processor.connect(this.silentOut);
+    this.silentOut.connect(ctx.destination);
+
+    this.recording = false;
+    this.left = [];
+    this.right = [];
+    this.framesRecorded = 0;
+
+    this.processor.onaudioprocess = (e) => {
+      if (!this.recording) return;
+      const inL = e.inputBuffer.getChannelData(0);
+      const inR = e.inputBuffer.numberOfChannels > 1
+        ? e.inputBuffer.getChannelData(1)
+        : inL;
+      this.left.push(new Float32Array(inL));
+      this.right.push(new Float32Array(inR));
+      this.framesRecorded += inL.length;
+    };
+  }
+
+  start() {
+    this.left = [];
+    this.right = [];
+    this.framesRecorded = 0;
+    this.recording = true;
+  }
+
+  stop() {
+    this.recording = false;
+  }
+
+  getDurationSec() {
+    return this.framesRecorded / this.sampleRate;
+  }
+
+  encode() {
+    const merge = (chunks) => {
+      const len = chunks.reduce((s, c) => s + c.length, 0);
+      const out = new Float32Array(len);
+      let off = 0;
+      for (const c of chunks) { out.set(c, off); off += c.length; }
+      return out;
+    };
+    return encodeWAV(merge(this.left), merge(this.right), this.sampleRate);
+  }
+}
+
+function encodeWAV(left, right, sampleRate) {
+  const numChannels = 2;
+  const bytesPerSample = 2; // 16-bit PCM
+  const numFrames = left.length;
+  const dataSize = numFrames * numChannels * bytesPerSample;
+  const totalSize = 44 + dataSize;
+  const buffer = new ArrayBuffer(totalSize);
+  const view = new DataView(buffer);
+
+  const writeString = (off, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, totalSize - 8, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);          // fmt chunk size
+  view.setUint16(20, 1, true);           // PCM format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // byte rate
+  view.setUint16(32, numChannels * bytesPerSample, true);              // block align
+  view.setUint16(34, 16, true);          // bits per sample
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < numFrames; i++) {
+    const l = Math.max(-1, Math.min(1, left[i]));
+    const r = Math.max(-1, Math.min(1, right[i]));
+    view.setInt16(offset, l < 0 ? l * 0x8000 : l * 0x7FFF, true); offset += 2;
+    view.setInt16(offset, r < 0 ? r * 0x8000 : r * 0x7FFF, true); offset += 2;
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function formatTimerSec(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + sec.toString().padStart(2, '0');
+}
+
+function makeFilename() {
+  const d = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+  return `petrichor-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.wav`;
+}
+
+// ═══════════════════════════════════════════════
+// HAND ANALYZER
+// ═══════════════════════════════════════════════
+class HandAnalyzer {
+  constructor() {
+    this.palm = null;
+    this.spread = 0;
+    this.pinch = 1;
+    this.velocity = 0;
+    this._lastRawPalm = null;
+    this._present = false;
+  }
+  reset() {
+    this.palm = null;
+    this.spread = 0;
+    this.pinch = 1;
+    this.velocity = 0;
+    this._lastRawPalm = null;
+    this._present = false;
+  }
+  update(lm) {
+    if (!lm) { this.reset(); return; }
+    this._present = true;
+    const px = 1 - lm[9].x;
+    const py = lm[9].y;
+
+    const smoothing = 0.65;
+    if (!this.palm) this.palm = { x: px, y: py };
+    else {
+      this.palm.x = this.palm.x * smoothing + px * (1 - smoothing);
+      this.palm.y = this.palm.y * smoothing + py * (1 - smoothing);
+    }
+
+    const tips = [4, 8, 12, 16, 20];
+    let sumD = 0;
+    for (const i of tips) {
+      const tx = 1 - lm[i].x, ty = lm[i].y;
+      const dx = tx - px, dy = ty - py;
+      sumD += Math.sqrt(dx*dx + dy*dy);
+    }
+    const rawSpread = sumD / 5;
+    const normSpread = Math.max(0, Math.min(1, (rawSpread - 0.06) / 0.16));
+    this.spread = this.spread * 0.7 + normSpread * 0.3;
+
+    const tx4 = 1 - lm[4].x, ty4 = lm[4].y;
+    const tx8 = 1 - lm[8].x, ty8 = lm[8].y;
+    const pd = Math.sqrt((tx4-tx8)**2 + (ty4-ty8)**2);
+    const normPinch = Math.max(0, Math.min(1, (pd - 0.04) / 0.08));
+    this.pinch = this.pinch * 0.6 + normPinch * 0.4;
+
+    if (this._lastRawPalm) {
+      const dx = px - this._lastRawPalm.x;
+      const dy = py - this._lastRawPalm.y;
+      this.velocity = this.velocity * 0.75 + Math.sqrt(dx*dx + dy*dy) * 0.25;
+    }
+    this._lastRawPalm = { x: px, y: py };
+  }
+  get present() { return this._present; }
+}
+
+// ═══════════════════════════════════════════════
+// PARTICLES / RIPPLES
+// ═══════════════════════════════════════════════
+const particles = [];
+const MAX_PARTICLES = 280;
+
+function spawnParticle(x, y, opts = {}) {
+  if (particles.length >= MAX_PARTICLES) particles.shift();
+  particles.push({
+    x, y,
+    vx: opts.vx ?? (Math.random() - 0.5) * 0.3,
+    vy: opts.vy ?? -0.4 - Math.random() * 0.6,
+    life: 0,
+    maxLife: opts.maxLife ?? (1800 + Math.random() * 1400),
+    size: opts.size ?? (1 + Math.random() * 2.5),
+    color: opts.color ?? [220, 255, 220],
+    streak: opts.streak ?? false,
+    twinkle: Math.random() * 6.28,
+  });
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt * 0.06;
+    p.y += p.vy * dt * 0.06;
+    p.vx += (Math.random() - 0.5) * 0.002;
+    p.twinkle += dt * 0.005;
+  }
+}
+
+function drawParticles(ctx, W, H) {
+  for (const p of particles) {
+    const t = p.life / p.maxLife;
+    let alpha;
+    if (t < 0.15) alpha = t / 0.15;
+    else if (t > 0.6) alpha = (1 - (t - 0.6) / 0.4);
+    else alpha = 1;
+    alpha *= (0.7 + 0.3 * Math.sin(p.twinkle));
+
+    const px = p.x * W;
+    const py = p.y * H;
+
+    if (p.streak) {
+      const len = 28 + p.size * 18;
+      const grad = ctx.createLinearGradient(px, py - len, px, py + 4);
+      const [r,g,b] = p.color;
+      grad.addColorStop(0,  `rgba(${r},${g},${b},0)`);
+      grad.addColorStop(0.7,`rgba(${r},${g},${b},${0.5 * alpha})`);
+      grad.addColorStop(1,  `rgba(${r},${g},${b},${alpha})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = p.size * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(px, py - len);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      const bulbR = p.size * 2.5;
+      const bg = ctx.createRadialGradient(px, py, 0, px, py, bulbR * 2);
+      bg.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      bg.addColorStop(0.4, `rgba(${r},${g},${b},${alpha * 0.6})`);
+      bg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(px, py, bulbR * 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const r = p.size * 5;
+      const [cr,cg,cb] = p.color;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+      g.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      g.addColorStop(0.3, `rgba(${cr},${cg},${cb},${alpha * 0.5})`);
+      g.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+const ripples = [];
+function spawnRipple(x, y, color, maxR = 0.25) {
+  ripples.push({ x, y, life:0, maxLife: 1600, color, maxR });
+}
+
+// ═══════════════════════════════════════════════
+// PAINT RESIDUES — discrete paint blobs that bloom & fade
+// Spawned as hand moves; like ink drops on wet paper
+// ═══════════════════════════════════════════════
+const paintResidues = [];
+const MAX_RESIDUES = 22;
+
+function spawnPaintResidue(x, y, family, velScale) {
+  if (paintResidues.length >= MAX_RESIDUES) paintResidues.shift();
+  const palette = (family === 'left')
+    ? [[210, 180, 155], [220, 195, 165], [200, 175, 145], [215, 200, 170]]
+    : [[150, 195, 165], [165, 205, 175], [175, 200, 165], [140, 190, 175]];
+  const color = palette[Math.floor(Math.random() * palette.length)];
+  paintResidues.push({
+    x, y, color,
+    life: 0,
+    maxLife: 1800 + Math.random() * 1400,
+    baseRadius: 32 + 45 * velScale + Math.random() * 20,
+    seed: Math.floor(Math.random() * 100000),
+    rotation: Math.random() * Math.PI * 2,
+  });
+}
+
+function updatePaintResidues(dt) {
+  for (let i = paintResidues.length - 1; i >= 0; i--) {
+    paintResidues[i].life += dt;
+    if (paintResidues[i].life > paintResidues[i].maxLife) {
+      paintResidues.splice(i, 1);
+    }
+  }
+}
+
+function drawPaintResidues(ctx, W, H) {
+  for (const r of paintResidues) {
+    const t = r.life / r.maxLife;
+    const [cr, cg, cb] = r.color;
+    // Bloom radius — quick expand then slow continuous diffusion
+    const radius = r.baseRadius * (t < 0.18
+      ? 0.3 + 0.7 * (t / 0.18)
+      : 1.0 + (t - 0.18) * 0.55);
+    // Alpha — quick rise, sustain, slow fade
+    let alpha;
+    if (t < 0.08) alpha = t / 0.08;
+    else if (t < 0.45) alpha = 1.0;
+    else alpha = Math.max(0, 1 - (t - 0.45) / 0.55);
+
+    const px = r.x * W;
+    const py = r.y * H;
+    const rng = mulberry32(r.seed);
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(r.rotation);
+    // 6 overlapping fuzzy gradient circles → organic watercolor blob
+    for (let k = 0; k < 6; k++) {
+      const ox = (rng() - 0.5) * radius * 0.55;
+      const oy = (rng() - 0.5) * radius * 0.55;
+      const kr = radius * (0.55 + rng() * 0.7);
+      const ka = alpha * (0.14 + rng() * 0.18);
+      const grad = ctx.createRadialGradient(ox, oy, 0, ox, oy, kr);
+      grad.addColorStop(0,   `rgba(${cr},${cg},${cb},${ka})`);
+      grad.addColorStop(0.5, `rgba(${cr},${cg},${cb},${ka * 0.5})`);
+      grad.addColorStop(1,   `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(ox, oy, kr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function updateRipples(dt) {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    ripples[i].life += dt;
+    if (ripples[i].life >= ripples[i].maxLife) ripples.splice(i, 1);
+  }
+}
+function drawRipples(ctx, W, H) {
+  for (const r of ripples) {
+    const t = r.life / r.maxLife;
+    const radius = r.maxR * t * Math.min(W, H);
+    const alpha = (1 - t) * 0.4;
+    const [cr,cg,cb] = r.color;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+    ctx.lineWidth = 1.5 * (1 - t * 0.5);
+    ctx.beginPath();
+    ctx.arc(r.x * W, r.y * H, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════
+// HAND DRAWING
+// ═══════════════════════════════════════════════
+const HAND_CONN = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17]
+];
+
+function drawHand(ctx, lm, W, H, baseColor, glowColor) {
+  const pt = i => ({ x: (1 - lm[i].x) * W, y: lm[i].y * H });
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  ctx.strokeStyle = glowColor;
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = 24;
+  ctx.beginPath();
+  for (const [a,b] of HAND_CONN) {
+    const pa = pt(a), pb = pt(b);
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+  }
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = baseColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const [a,b] of HAND_CONN) {
+    const pa = pt(a), pb = pt(b);
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+  }
+  ctx.stroke();
+
+  for (let i = 0; i < 21; i++) {
+    const p = pt(i);
+    const r = (i === 0 || i === 9) ? 5 : (i % 4 === 0 ? 4 : 2.5);
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.4, baseColor);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPinch(ctx, lm, W, H, color) {
+  const t1 = { x: (1 - lm[4].x) * W, y: lm[4].y * H };
+  const t2 = { x: (1 - lm[8].x) * W, y: lm[8].y * H };
+  const mx = (t1.x + t2.x) / 2, my = (t1.y + t2.y) / 2;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(mx, my, 0, mx, my, 40);
+  g.addColorStop(0, color);
+  g.addColorStop(0.3, color.replace('1)', '0.4)'));
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(mx, my, 40, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const cctx = canvas.getContext('2d');
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const leftAnalyzer  = new HandAnalyzer();
+const rightAnalyzer = new HandAnalyzer();
+
+let frozenSourcePos = null;
+let prevRightSpread = 0;
+let prevLeftSpread = 0;
+let residueCdLeft = 0;
+let residueCdRight = 0;
+let leftLandmarks = null;
+let rightLandmarks = null;
+
+async function begin() {
+  document.getElementById('beginBtn').disabled = true;
+  document.getElementById('beginBtn').textContent = 'awakening...';
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    presetBuffers.birds = makeBirds(audioCtx, 6);
+    presetBuffers.rain  = makeRain(audioCtx, 6);
+    presetBuffers.waves = makeWaves(audioCtx, 6);
+    presetBuffers.earth = makeEarth(audioCtx, 6);
+
+    engine = new GrainEngine(audioCtx);
+    engine.setBuffer(presetBuffers[currentSource]);
+    engine.onGrain = onGrainSpawned;
+    engine.start();
+
+    // Hook up WAV recorder — tap the engine's master output
+    recorder = new WavRecorder(audioCtx);
+    engine.masterGain.connect(recorder.input);
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 1280, height: 720, facingMode: 'user' }
+    });
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    initHands();
+
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('controls').classList.add('show');
+    }, 800);
+
+    requestAnimationFrame(loop);
+  } catch(e) {
+    console.error(e);
+    document.getElementById('beginBtn').textContent = 'begin';
+    document.getElementById('beginBtn').disabled = false;
+  }
+}
+
+function initHands() {
+  const hands = new Hands({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+  });
+  hands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.6,
+  });
+  hands.onResults(onHandResults);
+  const cam = new Camera(video, {
+    onFrame: async () => { await hands.send({ image: video }); },
+    width: 1280, height: 720,
+  });
+  cam.start();
+}
+
+function onHandResults(results) {
+  leftLandmarks = null;
+  rightLandmarks = null;
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    results.multiHandLandmarks.forEach((lm, i) => {
+      const label = results.multiHandedness[i].label;
+      if (label === 'Right') leftLandmarks = lm;
+      else rightLandmarks = lm;
+    });
+  }
+  leftAnalyzer.update(leftLandmarks);
+  rightAnalyzer.update(rightLandmarks);
+}
+
+let lastGrainVisualAt = 0;
+function onGrainSpawned(streamIdx, when, freq) {
+  const now = performance.now();
+  if (now - lastGrainVisualAt < 38) return;
+  lastGrainVisualAt = now;
+  if (!rightAnalyzer.present) return;
+  const palm = rightAnalyzer.palm;
+  const x = palm.x + (Math.random() - 0.5) * 0.18;
+  const y = palm.y - 0.05 + (Math.random() - 0.5) * 0.14;
+  const colors = [
+    [196, 255, 170],
+    [220, 255, 200],
+    [232, 255, 230],
+    [220, 240, 255],
+    [200, 220, 255],
+  ];
+  spawnParticle(x, y, {
+    color: colors[streamIdx],
+    vy: -0.5 - Math.random() * 0.5,
+    vx: (Math.random() - 0.5) * 0.15,
+    size: 1.5 + Math.random() * 2,
+    streak: streamIdx <= 1,
+    maxLife: 1500 + Math.random() * 1000,
+  });
+}
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(60, now - lastT);
+  lastT = now;
+
+  const leftPresent  = leftAnalyzer.present;
+  const rightPresent = rightAnalyzer.present;
+
+  const defLeft  = { x: 0.5, y: 0.5, spread: 0.5 };
+  const defRight = { x: 0.5, y: 0.5, spread: 0.0, pinch: 1 };
+  const L = leftPresent  ? leftAnalyzer  : { palm: defLeft,  spread: defLeft.spread,  pinch: 1 };
+  const R = rightPresent ? rightAnalyzer : { palm: defRight, spread: defRight.spread, pinch: defRight.pinch };
+
+  // LEFT → source params
+  const rawSourcePos = leftPresent ? clamp01(L.palm.x) : 0.5;
+  const sourcePos = (rightPresent && R.pinch < 0.3 && frozenSourcePos != null)
+    ? frozenSourcePos : rawSourcePos;
+  if (rightPresent && R.pinch < 0.3 && frozenSourcePos == null) {
+    frozenSourcePos = rawSourcePos;
+  } else if (!rightPresent || R.pinch >= 0.3) {
+    frozenSourcePos = null;
+  }
+  const yL = leftPresent ? clamp01(L.palm.y) : 0.5;
+  // Grain size: 5ms (top/fine granular) → 80ms (bottom/smooth pad)
+  // Exponential scaling restores the responsive granular character
+  const grainSize = 0.005 * Math.pow(16, yL);
+  const spray = leftPresent ? L.spread : 0;
+
+  // RIGHT → pitch/color
+  const yR = rightPresent ? clamp01(R.palm.y) : 0.5;
+  const basePitch = 100 * Math.pow(660/100, 1 - yR);
+  const xR = rightPresent ? clamp01(R.palm.x) : 0.5;
+  const filterFreq = 220 * Math.pow(8000/220, xR);
+  const harmonyAmt = rightPresent ? R.spread : 0;
+
+  // Hand-distance reverb additive
+  let handReverbBoost = 0;
+  if (leftPresent && rightPresent) {
+    const dx = L.palm.x - R.palm.x;
+    const dy = L.palm.y - R.palm.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    handReverbBoost = clamp01(dist / 0.9) * 0.3;
+  }
+  const finalReverbAmt = Math.min(1, reverbAmt + handReverbBoost);
+
+  const vel = (leftAnalyzer.velocity + rightAnalyzer.velocity) * 0.5;
+  const masterAmt = 0.55 + Math.min(0.25, vel * 8);
+
+  if (engine) {
+    engine.update({
+      basePitch, filterFreq,
+      sourcePos, grainSize, spray,
+      harmonyAmt,
+      reverbAmt: finalReverbAmt,
+      delayAmt,
+      masterAmt: (leftPresent || rightPresent) ? masterAmt : 0,
+    });
+  }
+
+  // Ripples on bloom
+  if (rightPresent) {
+    const ds = R.spread - prevRightSpread;
+    if (ds > 0.06) spawnRipple(R.palm.x, R.palm.y, [200, 220, 255], 0.22);
+    prevRightSpread = R.spread;
+  }
+  if (leftPresent) {
+    const ds = L.spread - prevLeftSpread;
+    if (ds > 0.06) spawnRipple(L.palm.x, L.palm.y, [255, 244, 168], 0.18);
+    prevLeftSpread = L.spread;
+  }
+
+  // Paint residues — bloom at hand position when moving, then fade
+  // Cooldown prevents continuous smearing; threshold gates idle hands
+  residueCdLeft  = Math.max(0, residueCdLeft  - dt);
+  residueCdRight = Math.max(0, residueCdRight - dt);
+  if (leftPresent && residueCdLeft <= 0 && leftAnalyzer.velocity > 0.0035) {
+    const v = Math.min(1, leftAnalyzer.velocity * 90);
+    const palm = L.palm;
+    spawnPaintResidue(
+      palm.x + (Math.random() - 0.5) * 0.04,
+      palm.y + (Math.random() - 0.5) * 0.04,
+      'left', v
+    );
+    residueCdLeft = 110 + Math.random() * 180;
+  }
+  if (rightPresent && residueCdRight <= 0 && rightAnalyzer.velocity > 0.0035) {
+    const v = Math.min(1, rightAnalyzer.velocity * 90);
+    const palm = R.palm;
+    spawnPaintResidue(
+      palm.x + (Math.random() - 0.5) * 0.04,
+      palm.y + (Math.random() - 0.5) * 0.04,
+      'right', v
+    );
+    residueCdRight = 110 + Math.random() * 180;
+  }
+
+  // Fingertip glow particles
+  if (leftPresent && Math.random() < 0.35) {
+    const tipIdx = [4,8,12,16,20][Math.floor(Math.random() * 5)];
+    const tip = leftLandmarks[tipIdx];
+    if (tip) spawnParticle(1 - tip.x, tip.y, {
+      color: [255, 244, 168],
+      vx: (Math.random() - 0.5) * 0.08,
+      vy: -0.15 - Math.random() * 0.25,
+      size: 0.8 + Math.random() * 1.4,
+      maxLife: 1200 + Math.random() * 800,
+    });
+  }
+  if (rightPresent && Math.random() < 0.35) {
+    const tipIdx = [4,8,12,16,20][Math.floor(Math.random() * 5)];
+    const tip = rightLandmarks[tipIdx];
+    if (tip) spawnParticle(1 - tip.x, tip.y, {
+      color: [196, 255, 220],
+      vx: (Math.random() - 0.5) * 0.08,
+      vy: -0.15 - Math.random() * 0.25,
+      size: 0.8 + Math.random() * 1.4,
+      maxLife: 1200 + Math.random() * 800,
+    });
+  }
+
+  // Render
+  const W = window.innerWidth, H = window.innerHeight;
+  // Clear fully transparent — bgCanvas underneath shows through
+  cctx.clearRect(0, 0, W, H);
+
+  cctx.save();
+  cctx.globalCompositeOperation = 'source-over';
+  const pulseR = Math.min(W, H) * (0.35 + harmonyAmt * 0.3);
+  const bgPulse = cctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, pulseR);
+  // Soft sage halo that strengthens with harmony
+  bgPulse.addColorStop(0, `rgba(200,225,190,${0.06 + harmonyAmt*0.09})`);
+  bgPulse.addColorStop(1, 'rgba(200,225,190,0)');
+  cctx.fillStyle = bgPulse;
+  cctx.fillRect(0, 0, W, H);
+  cctx.restore();
+
+  updateRipples(dt);
+  updatePaintResidues(dt);
+  drawPaintResidues(cctx, W, H);
+  drawRipples(cctx, W, H);
+  updateParticles(dt);
+  drawParticles(cctx, W, H);
+
+  if (leftLandmarks)  drawHand(cctx, leftLandmarks,  W, H, 'rgba(120,160,125,0.85)', 'rgba(155,190,140,0.35)');
+  if (rightLandmarks) drawHand(cctx, rightLandmarks, W, H, 'rgba(115,165,140,0.9)',  'rgba(150,195,165,0.4)');
+
+  if (rightLandmarks && rightAnalyzer.pinch < 0.45) {
+    drawPinch(cctx, rightLandmarks, W, H, 'rgba(255,255,255,1)');
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+// ═══════════════════════════════════════════════
+// CONTROLS — sources, recording, effects sliders
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.source-btn[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const preset = btn.dataset.preset;
+    currentSource = preset;
+    if (engine && presetBuffers[preset]) engine.setBuffer(presetBuffers[preset]);
+    document.querySelectorAll('.source-btn[data-preset]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+document.getElementById('recBtn').addEventListener('click', async () => {
+  if (!audioCtx) return;
+  if (!isRec) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recChunks = [];
+      mediaRec = new MediaRecorder(stream);
+      mediaRec.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
+      mediaRec.onstop = async () => {
+        const blob = new Blob(recChunks, { type: 'audio/webm' });
+        const ab = await blob.arrayBuffer();
+        try {
+          userBuffer = await audioCtx.decodeAudioData(ab);
+          engine.setBuffer(userBuffer);
+          document.querySelectorAll('.source-btn[data-preset]').forEach(b => b.classList.remove('active'));
+          document.getElementById('recBtn').textContent = `● voice ${userBuffer.duration.toFixed(1)}s`;
+        } catch(e) {
+          document.getElementById('recBtn').textContent = '● record';
+        }
+      };
+      mediaRec.start();
+      isRec = true;
+      document.getElementById('recBtn').classList.add('recording');
+      document.getElementById('recBtn').textContent = '■ stop';
+    } catch(e) {
+      document.getElementById('recBtn').textContent = 'mic denied';
+    }
+  } else {
+    mediaRec.stop();
+    mediaRec.stream.getTracks().forEach(t => t.stop());
+    isRec = false;
+    document.getElementById('recBtn').classList.remove('recording');
+  }
+});
+
+// Effects sliders
+const reverbSlider = document.getElementById('reverbSlider');
+const delaySlider  = document.getElementById('delaySlider');
+const reverbVal = document.getElementById('reverbVal');
+const delayVal  = document.getElementById('delayVal');
+
+reverbSlider.addEventListener('input', e => {
+  reverbAmt = parseInt(e.target.value) / 100;
+  reverbVal.textContent = e.target.value;
+});
+delaySlider.addEventListener('input', e => {
+  delayAmt = parseInt(e.target.value) / 100;
+  delayVal.textContent = e.target.value;
+});
+
+// Save (WAV export) button
+const saveBtn = document.getElementById('saveBtn');
+saveBtn.addEventListener('click', () => {
+  if (!recorder) return;
+  if (!isSaving) {
+    // Start
+    recorder.start();
+    isSaving = true;
+    saveBtn.classList.add('saving');
+    saveBtn.textContent = '■ 0:00';
+    saveTimerInterval = setInterval(() => {
+      saveBtn.textContent = '■ ' + formatTimerSec(recorder.getDurationSec());
+    }, 250);
+  } else {
+    // Stop & encode & download
+    recorder.stop();
+    isSaving = false;
+    clearInterval(saveTimerInterval);
+    saveTimerInterval = null;
+    saveBtn.classList.remove('saving');
+    saveBtn.textContent = 'encoding...';
+    // Encode on next tick so the UI can update
+    setTimeout(() => {
+      try {
+        const blob = recorder.encode();
+        downloadBlob(blob, makeFilename());
+        saveBtn.textContent = '✓ saved';
+        setTimeout(() => { saveBtn.textContent = '↓ save'; }, 1500);
+      } catch (e) {
+        console.error(e);
+        saveBtn.textContent = '↓ save';
+      }
+    }, 30);
+  }
+});
+</script>
+</body>
+</html>
